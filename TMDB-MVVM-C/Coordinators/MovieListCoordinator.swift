@@ -1,5 +1,5 @@
 //
-//  AppCoordinator.swift
+//  MovieListCoordinator.swift
 //  TMDB-MVVM-C
 //
 //  Created by David Lee on 4/10/26.
@@ -7,7 +7,7 @@
 
 import UIKit
 
-final class AppCoordinator: Coordinator {
+final class MovieListCoordinator: Coordinator {
   var navigationController: UINavigationController
   var childCoordinators: [Coordinator] = []
   
@@ -16,11 +16,6 @@ final class AppCoordinator: Coordinator {
   }
   
   func start() {
-    let movieListCoordinator = MovieListCoordinator(
-      navigationController: navigationController
-    )
     
-    childCoordinators.append(movieListCoordinator)
-    movieListCoordinator.start()
   }
 }
