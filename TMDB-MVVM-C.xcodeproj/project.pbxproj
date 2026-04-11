@@ -346,6 +346,8 @@
 		};
 		636C58BA2F8903D50070F7F2 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 636C58902F8903D30070F7F2 /* TMDB-MVVM-C */;
+			baseConfigurationReferenceRelativePath = Configuration/Secret.xcconfig;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -409,6 +411,8 @@
 		};
 		636C58BB2F8903D50070F7F2 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 636C58902F8903D30070F7F2 /* TMDB-MVVM-C */;
+			baseConfigurationReferenceRelativePath = Configuration/Secret.xcconfig;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
