@@ -22,6 +22,7 @@ final class DetailCoordinator: Coordinator {
   }
   
   func start() {
-    
+    let vc = MovieDetailViewController()
+    navigationController.pushViewController(vc, animated: true)
   }
 }
