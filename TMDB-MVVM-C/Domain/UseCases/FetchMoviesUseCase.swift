@@ -19,6 +19,7 @@ final class FetchMoviesUseCase: FetchMoviesUseCaseProtocol {
   }
   
   func execute(page: Int) async throws -> [Movie] {
-    try await repository.fetchMovies(page: page)
+    let movies = try await repository.fetchMovies(page: page)
+    return movies.filter { $0.voteAverage >= 6.0 }
   }
 }
