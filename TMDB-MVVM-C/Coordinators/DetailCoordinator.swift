@@ -17,12 +17,28 @@ final class DetailCoordinator: Coordinator {
   var childCoordinators: [Coordinator] = []
   weak var delegate: DetailCoordinatorDelegate?
   
-  init(navigationController: UINavigationController) {
+  private let movieId: Int
+  
+  init(navigationController: UINavigationController, movieId: Int) {
     self.navigationController = navigationController
+    self.movieId = movieId
   }
   
   func start() {
-    let vc = MovieDetailViewController()
+    let networkService = NetworkService()
+    let repository = MovieRepository(networkService: networkService)
+    let useCase = FetchMovieDetailUseCase(repository: repository)
+    let viewModel = MovieDetailViewModel(
+      fetchMovieDetailUseCase: useCase,
+      movieId: movieId
+    )
+    
+    let vc = MovieDetailViewController(viewModel: viewModel)
+    vc.coordinator = self
     navigationController.pushViewController(vc, animated: true)
+  }
+  
+  func didFinish() {
+    delegate?.detailCoordinatorDidFinish(self)
   }
 }
