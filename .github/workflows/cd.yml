@@ -1,0 +1,46 @@
+name: CD
+
+on:
+  push:
+    branches: [ main ]   # main 合併才觸發部署
+
+jobs:
+  deploy:
+    name: Deploy to TestFlight
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_15.2.app
+      
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+      
+      - name: Create Secret.xcconfig
+        run: |
+          echo "TMDB_API_KEY=${{ secrets.TMDB_API_KEY }}" \
+          > MovieBrowser/Configuration/Secret.xcconfig
+      
+      - name: Install Certificates
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          echo "$CERTIFICATE_BASE64" | base64 --decode > certificate.p12
+          security import certificate.p12 \
+            -k build.keychain \
+            -P "$P12_PASSWORD" \
+            -T /usr/bin/codesign
+      
+      - name: Deploy with Fastlane
+        env:
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+        run: bundle exec fastlane deploy
