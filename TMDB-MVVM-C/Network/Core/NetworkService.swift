@@ -32,30 +32,50 @@ protocol NetworkServiceProtocol {
 final class NetworkService: NetworkServiceProtocol {
   private let session: URLSession
   private let decoder: JSONDecoder
+  private let retryHandler: RetryHandler
   
-  init(session: URLSession = .shared) {
+  init(
+    session: URLSession = .shared,
+    retryHandler: RetryHandler = RetryHandler()
+  ) {
     self.session = session
     self.decoder = JSONDecoder()
     self.decoder.keyDecodingStrategy = .convertFromSnakeCase
+    self.retryHandler = retryHandler
   }
   
   func request<T: Decodable>(_ endpoint: Endpoint) async throws -> T {
-    let request = try endpoint.asURLRequest()
-    
-    let (data, response) = try await session.data(for: request)
-    
-    guard let httpResponse = response as? HTTPURLResponse else {
-      throw NetworkError.invalidResponse
-    }
-    
-    guard (200...299).contains(httpResponse.statusCode) else {
-      throw NetworkError.statusCode(httpResponse.statusCode)
-    }
-    
-    do {
-      return try decoder.decode(T.self, from: data)
-    } catch {
-      throw NetworkError.decodingFailed(error)
+    try await retryHandler.execute {
+      let request = try endpoint.asURLRequest()
+      
+      let (data, response): (Data, URLResponse)
+
+      do {
+        (data, response) = try await session.data(for: request)
+      } catch let urlError as URLError {
+        switch urlError.code {
+        case .notConnectedToInternet, .networkConnectionLost:
+          throw AppError.networkUnavailable
+        case .timedOut:
+          throw AppError.timeout
+        default:
+          throw AppError.unknown(urlError)
+        }
+      }
+      
+      guard let httpResponse = response as? HTTPURLResponse else {
+        throw AppError.unknown(NetworkError.invalidResponse)
+      }
+      
+      guard (200...299).contains(httpResponse.statusCode) else {
+        throw AppError.from(.statusCode(httpResponse.statusCode))
+      }
+      
+      do {
+        return try decoder.decode(T.self, from: data)
+      } catch {
+        throw AppError.decodingFailed
+      }
     }
   }
 }
