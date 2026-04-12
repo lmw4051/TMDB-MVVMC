@@ -76,24 +76,7 @@ final class MovieCell: UICollectionViewCell {
   func configure(with movie: Movie) {
     titleLabel.text = movie.title
     ratingLabel.text = "⭐ \(String(format: "%.1f", movie.voteAverage))"
-    loadImage(from: movie.posterPath)
-  }
-  
-  private func loadImage(from path: String?) {
-    guard let path = path else {
-      posterImageView.image = nil
-      return
-    }
-    let urlString = "https://image.tmdb.org/t/p/w500\(path)"
-    guard let url = URL(string: urlString) else { return }
-    
-    Task {
-      guard let (data, _) = try? await URLSession.shared.data(from: url),
-            let image = UIImage(data: data) else { return }
-      await MainActor.run {
-        self.posterImageView.image = image
-      }
-    }
+    posterImageView.loadImage(from: movie.posterPath)
   }
   
   override func prepareForReuse() {
