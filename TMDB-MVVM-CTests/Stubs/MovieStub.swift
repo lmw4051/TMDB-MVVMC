@@ -28,3 +28,18 @@ enum MovieStub {
     (1...count).map { makeMovie(id: $0, title: "Movie \($0)") }
   }
 }
+
+extension MovieStub {
+  static func makeDTOs(count: Int, startId: Int = 1) -> [MovieDTO] {
+    (startId ..< startId + count).map {
+      MovieDTO(
+        id: $0,
+        title: "Movie \($0)",
+        overview: "Overview \($0)",
+        posterPath: nil,
+        voteAverage: 7.0,
+        releaseDate: "2024-01-01"
+      )
+    }
+  }
+}
