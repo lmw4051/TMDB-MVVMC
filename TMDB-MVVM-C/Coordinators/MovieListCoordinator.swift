@@ -26,6 +26,16 @@ final class MovieListCoordinator: Coordinator {
     navigationController.pushViewController(vc, animated: false)
   }
   
+  func showSearch() {
+    let searchCoordinator = SearchCoordinator(
+      navigationController: navigationController
+    )
+    
+    searchCoordinator.delegate = self
+    childCoordinators.append(searchCoordinator)
+    searchCoordinator.start()
+  }
+  
   func showDetail(movieId: Int) {
     let detailCoordinator = DetailCoordinator(
       navigationController: navigationController,
@@ -35,6 +45,13 @@ final class MovieListCoordinator: Coordinator {
     detailCoordinator.delegate = self
     childCoordinators.append(detailCoordinator)
     detailCoordinator.start()
+  }
+}
+
+// MARK: - SearchCoordinatorDelegate
+extension MovieListCoordinator: SearchCoordinatorDelegate {
+  func searchCoordinatorDidFinish(_ coordinator: SearchCoordinator) {
+    childCoordinators.removeAll { $0 === coordinator }
   }
 }
 
