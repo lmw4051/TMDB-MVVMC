@@ -8,7 +8,7 @@
 import Foundation
 import Combine
 
-enum SearchState {
+enum SearchState: Equatable {
   case idle
   case skeletonLoading
   case success([Movie])

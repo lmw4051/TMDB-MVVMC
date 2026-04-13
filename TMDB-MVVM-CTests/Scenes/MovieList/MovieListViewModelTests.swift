@@ -9,6 +9,7 @@ import XCTest
 import Combine
 @testable import TMDB_MVVM_C
 
+@MainActor
 final class MovieListViewModelTests: XCTestCase {
   var sut: MovieListViewModel!
   var mockUseCase: MockFetchMoviesUseCase!
@@ -28,7 +29,6 @@ final class MovieListViewModelTests: XCTestCase {
     super.tearDown()
   }
   
-  @MainActor
   // MARK: - Tests
   func test_viewDidLoad_whenSuccess_shouldUpdateMovies() async {
     // Arrange
@@ -46,7 +46,6 @@ final class MovieListViewModelTests: XCTestCase {
     XCTAssertEqual(sut.movies.first?.title, "Movie 1")
   }
   
-  @MainActor
   func test_viewDidLoad_whenFailure_shouldSetErrorState() async {
     // Arrange
     mockUseCase.mockResult = .failure(NetworkError.invalidResponse)
@@ -64,7 +63,6 @@ final class MovieListViewModelTests: XCTestCase {
     }
   }
   
-  @MainActor
   func test_loadNextPage_whenAlreadyFetching_shouldNotFetchAgain() async {
     // Arrange
     mockUseCase.mockResult = .success(MovieStub.makeMovies(count: 20))
@@ -81,7 +79,6 @@ final class MovieListViewModelTests: XCTestCase {
     XCTAssertEqual(mockUseCase.executeCallCount, 1)
   }
   
-  @MainActor
   func test_refresh_shouldResetAndFetchFromFirstPage() async {
     // Arrange
     mockUseCase.mockResult = .success(MovieStub.makeMovies(count: 20))

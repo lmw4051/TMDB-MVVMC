@@ -25,6 +25,9 @@ final class MockMovieRepository: MovieRepositoryProtocol {
   )
   
   var fetchMoviesCallCount = 0
+  var searchMoviesCallCount = 0
+  
+  var searchMoviesResult: Result<[Movie], Error> = .success([])
   
   func fetchMovies(page: Int) async throws -> [Movie] {
     fetchMoviesCallCount += 1
@@ -33,5 +36,10 @@ final class MockMovieRepository: MovieRepositoryProtocol {
   
   func fetchMovieDetail(id: Int) async throws -> MovieDetail {
     return try fetchMovieDetailResult.get()
+  }
+  
+  func searchMovies(query: String, page: Int) async throws -> [Movie] {
+    searchMoviesCallCount += 1
+    return try searchMoviesResult.get()
   }
 }
