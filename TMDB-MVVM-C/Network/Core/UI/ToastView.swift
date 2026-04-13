@@ -24,13 +24,50 @@ final class ToastView: UIView {
     
     var icon: String {
       switch self {
-      case .success:
+      case .success: 
         return "✓"
       case .error:
         return "✕"
       case .warning:
         return "!"
       }
+    }
+  }
+  
+  static func show(
+    in view: UIView,
+    message: String,
+    type: ToastType = .error,
+    duration: TimeInterval = 3.0
+  ) {
+    let toast = ToastView(message: message, type: type)
+    view.addSubview(toast)
+    
+    toast.translatesAutoresizingMaskIntoConstraints = false
+    NSLayoutConstraint.activate([
+      toast.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+      toast.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+      toast.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16)
+    ])
+    
+    toast.alpha = 0
+    toast.transform = CGAffineTransform(translationX: 0, y: 20)
+    
+    UIView.animate(
+      withDuration: 0.3,
+      delay: 0,
+      usingSpringWithDamping: 0.8,
+      initialSpringVelocity: 0.5
+    ) {
+      toast.alpha = 1
+      toast.transform = .identity
+    }
+    
+    UIView.animate(withDuration: 0.3, delay: duration) {
+      toast.alpha = 0
+      toast.transform = CGAffineTransform(translationX: 0, y: 20)
+    } completion: { _ in
+      toast.removeFromSuperview()
     }
   }
   

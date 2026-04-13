@@ -17,28 +17,42 @@ final class MovieListViewController: UIViewController {
   // MARK: - UI Components
   private lazy var collectionView: UICollectionView = {
     let layout = UICollectionViewFlowLayout()
+    let availableWidth = view.bounds.width
+    
     layout.itemSize = CGSize(
-      width: (UIScreen.main.bounds.width - 48) / 2,
+      width: (availableWidth - 48) / 2,
       height: 280
     )
     
     layout.minimumInteritemSpacing = 16
     layout.minimumLineSpacing = 16
     layout.sectionInset = UIEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
+    layout.footerReferenceSize = CGSize(width: availableWidth, height: 60)
+    
     let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
     cv.translatesAutoresizingMaskIntoConstraints = false
-    cv.register(MovieCell.self, forCellWithReuseIdentifier: MovieCell.reuseIdentifier)
+    
+    cv.register(
+      MovieCell.self,
+      forCellWithReuseIdentifier: MovieCell.reuseIdentifier
+    )
+    
+    cv.register(
+      SkeletonCell.self,
+      forCellWithReuseIdentifier: SkeletonCell.reuseIdentifier
+    )
+    
+    cv.register(
+      PaginationFooterView.self,
+      forSupplementaryViewOfKind: UICollectionView.elementKindSectionFooter,
+      withReuseIdentifier: PaginationFooterView.reuseIdentifier
+    )
+    
     cv.dataSource = self
     cv.delegate = self
     cv.prefetchDataSource = self
+    cv.refreshControl = refreshControl
     return cv
-  }()
-  
-  private lazy var activityIndicator: UIActivityIndicatorView = {
-    let indicator = UIActivityIndicatorView(style: .large)
-    indicator.translatesAutoresizingMaskIntoConstraints = false
-    indicator.hidesWhenStopped = true
-    return indicator
   }()
   
   private lazy var refreshControl: UIRefreshControl = {
@@ -47,15 +61,21 @@ final class MovieListViewController: UIViewController {
     return rc
   }()
   
+  private lazy var emptyStateView: EmptyStateView = {
+    let v = EmptyStateView()
+    v.translatesAutoresizingMaskIntoConstraints = false
+    v.isHidden = true
+    v.onRetry = { [weak self] in self?.viewModel.refresh() }
+    return v
+  }()
+  
   // MARK: - Init
   init(viewModel: MovieListViewModel) {
     self.viewModel = viewModel
     super.init(nibName: nil, bundle: nil)
   }
   
-  required init?(coder: NSCoder) {
-    fatalError("init(coder:) has not been implemented")
-  }
+  required init?(coder: NSCoder) { fatalError() }
   
   // MARK: - Lifecycle
   override func viewDidLoad() {
@@ -69,10 +89,8 @@ final class MovieListViewController: UIViewController {
   private func setupUI() {
     title = "Movies"
     view.backgroundColor = .systemBackground
-    
-    collectionView.refreshControl = refreshControl
     view.addSubview(collectionView)
-    view.addSubview(activityIndicator)
+    view.addSubview(emptyStateView)
     
     NSLayoutConstraint.activate([
       collectionView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
@@ -80,51 +98,74 @@ final class MovieListViewController: UIViewController {
       collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
       collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
       
-      activityIndicator.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-      activityIndicator.centerYAnchor.constraint(equalTo: view.centerYAnchor)
+      emptyStateView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+      emptyStateView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+      emptyStateView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+      emptyStateView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
     ])
   }
   
   private func bindViewModel() {
     viewModel.$movies
       .receive(on: DispatchQueue.main)
-      .sink { [weak self] _ in
-        self?.collectionView.reloadData()
-      }
+      .sink { [weak self] _ in self?.collectionView.reloadData() }
       .store(in: &cancellables)
     
-    viewModel.$state
+    viewModel.$listState
       .receive(on: DispatchQueue.main)
-      .sink { [weak self] state in
-        self?.handleState(state)
-      }
+      .sink { [weak self] state in self?.handleListState(state) }
       .store(in: &cancellables)
   }
   
-  private func handleState(_ state: ViewModelState<[Movie]>) {
+  private func handleListState(_ state: ListState) {
+    refreshControl.endRefreshing()
+    emptyStateView.isHidden = true
+    collectionView.isHidden = false
+    
     switch state {
     case .idle:
       break
-    case .loading:
-      if viewModel.movies.isEmpty {
-        activityIndicator.startAnimating()
-      }
+      
+    case .skeletonLoading:
+      collectionView.reloadData()
+      
+    case .paginationLoading:
+      collectionView.reloadData()
+      
     case .success:
-      activityIndicator.stopAnimating()
-      refreshControl.endRefreshing()
+      collectionView.reloadData()
+      
+    case .empty:
+      emptyStateView.isHidden = false
+      collectionView.isHidden = true
+      emptyStateView.configure(for: .noData)
+      
+    case .networkError:
+      if viewModel.movies.isEmpty {
+        emptyStateView.isHidden = false
+        collectionView.isHidden = true
+        emptyStateView.configure(for: .noNetwork)
+      } else {
+        ToastView.show(
+          in: view,
+          message: "Network Connection Failed",
+          type: .error
+        )
+      }
+      
     case .failure(let message):
-      activityIndicator.stopAnimating()
-      refreshControl.endRefreshing()
-      showErrorAlert(message: message)
+      if viewModel.movies.isEmpty {
+        emptyStateView.isHidden = false
+        collectionView.isHidden = true
+        emptyStateView.configure(for: .error(message))
+      } else {
+        ToastView.show(in: view, message: message, type: .error)
+      }
+      
+    case .paginationError(let message):
+      ToastView.show(in: view, message: message, type: .warning)
+      collectionView.reloadData()
     }
-  }
-  
-  private func showErrorAlert(message: String) {
-    let alert = UIAlertController(title: "Error",
-                                  message: message,
-                                  preferredStyle: .alert)
-    alert.addAction(UIAlertAction(title: "OK", style: .default))
-    present(alert, animated: true)
   }
   
   // MARK: - Actions
@@ -135,23 +176,77 @@ final class MovieListViewController: UIViewController {
 
 // MARK: - UICollectionViewDataSource
 extension MovieListViewController: UICollectionViewDataSource {
-  func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-    viewModel.movies.count
+  func collectionView(
+    _ collectionView: UICollectionView,
+    numberOfItemsInSection section: Int
+  ) -> Int {
+    switch viewModel.listState {
+    case .skeletonLoading:
+      return 6
+    default:
+      return viewModel.movies.count
+    }
   }
   
-  func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-    guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: MovieCell.reuseIdentifier, for: indexPath) as? MovieCell else {
-      return UICollectionViewCell()
+  func collectionView(
+    _ collectionView: UICollectionView,
+    cellForItemAt indexPath: IndexPath
+  ) -> UICollectionViewCell {
+    switch viewModel.listState {
+    case .skeletonLoading:
+      let cell = collectionView.dequeueReusableCell(
+        withReuseIdentifier: SkeletonCell.reuseIdentifier,
+        for: indexPath) as! SkeletonCell
+      cell.startShimmer()
+      return cell
+      
+    default:
+      let cell = collectionView.dequeueReusableCell(
+        withReuseIdentifier: MovieCell.reuseIdentifier,
+        for: indexPath
+      ) as! MovieCell
+      
+      cell.configure(with: viewModel.movies[indexPath.item])
+      
+      return cell
+    }
+  }
+  
+  func collectionView(
+    _ collectionView: UICollectionView,
+    viewForSupplementaryElementOfKind kind: String,
+    at indexPath: IndexPath
+  ) -> UICollectionReusableView {
+    let footer = collectionView.dequeueReusableSupplementaryView(
+      ofKind: kind,
+      withReuseIdentifier: PaginationFooterView.reuseIdentifier,
+      for: indexPath
+    ) as! PaginationFooterView
+    
+    footer.onRetry = { [weak self] in self?.viewModel.retryPagination() }
+    
+    switch viewModel.listState {
+    case .paginationLoading:
+      footer.configure(state: .loading)
+    case .paginationError:
+      footer.configure(state: .error)
+    case .success where !viewModel.canLoadMore:
+      footer.configure(state: .end)
+    default:
+      footer.configure(state: .hidden)
     }
     
-    cell.configure(with: viewModel.movies[indexPath.item])
-    return cell
+    return footer
   }
 }
 
 // MARK: - UICollectionViewDelegate
 extension MovieListViewController: UICollectionViewDelegate {
-  func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+  func collectionView(
+    _ collectionView: UICollectionView,
+    didSelectItemAt indexPath: IndexPath
+  ) {
+    guard case .success = viewModel.listState else { return }
     let movie = viewModel.movies[indexPath.item]
     coordinator?.showDetail(movieId: movie.id)
   }
@@ -159,7 +254,10 @@ extension MovieListViewController: UICollectionViewDelegate {
 
 // MARK: - UICollectionViewDataSourcePrefetching
 extension MovieListViewController: UICollectionViewDataSourcePrefetching {
-  func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
+  func collectionView(
+    _ collectionView: UICollectionView,
+    prefetchItemsAt indexPaths: [IndexPath]
+  ) {
     guard let maxIndex = indexPaths.map({ $0.item }).max() else { return }
     viewModel.loadNextPageIfNeeded(currentIndex: maxIndex)
   }
