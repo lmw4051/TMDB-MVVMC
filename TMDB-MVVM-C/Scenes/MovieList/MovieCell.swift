@@ -25,7 +25,8 @@ final class MovieCell: UICollectionViewCell {
     let label = UILabel()
     label.translatesAutoresizingMaskIntoConstraints = false
     label.font = .systemFont(ofSize: 14, weight: .medium)
-    label.numberOfLines = 2
+    label.numberOfLines = 0
+    label.setContentCompressionResistancePriority(.required, for: .vertical)
     return label
   }()
   
@@ -34,6 +35,7 @@ final class MovieCell: UICollectionViewCell {
     label.translatesAutoresizingMaskIntoConstraints = false
     label.font = .systemFont(ofSize: 12, weight: .regular)
     label.textColor = .secondaryLabel
+    label.setContentCompressionResistancePriority(.required, for: .vertical)
     return label
   }()
   
@@ -43,9 +45,7 @@ final class MovieCell: UICollectionViewCell {
     setupUI()
   }
   
-  required init?(coder: NSCoder) {
-    fatalError("init(coder:) has not been implemented")
-  }
+  required init?(coder: NSCoder) { fatalError() }
   
   // MARK: - Setup
   private func setupUI() {
@@ -57,18 +57,29 @@ final class MovieCell: UICollectionViewCell {
       posterImageView.topAnchor.constraint(equalTo: contentView.topAnchor),
       posterImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
       posterImageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-      posterImageView.heightAnchor.constraint(equalTo: contentView.widthAnchor,
-                                              multiplier: 1.5),
+      posterImageView.heightAnchor.constraint(
+        equalTo: contentView.widthAnchor, multiplier: 1.5
+      ),
       
-      titleLabel.topAnchor.constraint(equalTo: posterImageView.bottomAnchor,
-                                      constant: 8),
+      titleLabel.topAnchor.constraint(
+        equalTo: posterImageView.bottomAnchor,
+        constant: 8
+      ),
       titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
       titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
       
-      ratingLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor,
-                                       constant: 4),
+      ratingLabel.topAnchor.constraint(
+        equalTo: titleLabel.bottomAnchor,
+        constant: 4
+      ),
+      
       ratingLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-      ratingLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor)
+      ratingLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+      
+      ratingLabel.bottomAnchor.constraint(
+        equalTo: contentView.bottomAnchor,
+        constant: -8
+      )
     ])
   }
   
