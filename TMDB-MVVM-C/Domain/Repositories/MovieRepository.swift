@@ -25,4 +25,9 @@ final class MovieRepository: MovieRepositoryProtocol {
       .request(TMDBEndpoint.movieDetail(id: id))
     return MovieMapper.toDomain(dto)
   }
+  
+  func searchMovies(query: String, page: Int) async throws -> [Movie] {
+    let response: MovieListResponseDTO = try await networkService.request(TMDBEndpoint.searchMovies(query: query, page: page))
+    return response.results.map { MovieMapper.toDomain($0) }
+  }
 }
