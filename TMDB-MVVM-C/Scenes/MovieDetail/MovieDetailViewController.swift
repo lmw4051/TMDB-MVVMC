@@ -70,11 +70,19 @@ final class MovieDetailViewController: UIViewController {
     return label
   }()
   
-  private lazy var activityIndicator: UIActivityIndicatorView = {
-    let indicator = UIActivityIndicatorView(style: .large)
-    indicator.translatesAutoresizingMaskIntoConstraints = false
-    indicator.hidesWhenStopped = true
-    return indicator
+  private lazy var skeletonView: DetailSkeletonView = {
+    let v = DetailSkeletonView()
+    v.translatesAutoresizingMaskIntoConstraints = false
+    v.isHidden = true
+    return v
+  }()
+  
+  private lazy var emptyStateView: EmptyStateView = {
+    let v = EmptyStateView()
+    v.translatesAutoresizingMaskIntoConstraints = false
+    v.isHidden = true
+    v.onRetry = { [weak self] in self?.viewModel.retry() }
+    return v
   }()
   
   // MARK: - Init
@@ -83,9 +91,7 @@ final class MovieDetailViewController: UIViewController {
     super.init(nibName: nil, bundle: nil)
   }
   
-  required init?(coder: NSCoder) {
-    fatalError("init(coder:) has not been implemented")
-  }
+  required init?(coder: NSCoder) { fatalError() }
   
   // MARK: - Lifecycle
   override func viewDidLoad() {
@@ -107,13 +113,22 @@ final class MovieDetailViewController: UIViewController {
   private func setupUI() {
     view.backgroundColor = .systemBackground
     
+    // ScrollView（正式內容）
     view.addSubview(scrollView)
-    view.addSubview(activityIndicator)
     scrollView.addSubview(contentView)
-    
     [backdropImageView, titleLabel, ratingLabel,
      genreLabel, overviewLabel].forEach { contentView.addSubview($0) }
     
+    // Skeleton & EmptyState 疊在最上層
+    view.addSubview(skeletonView)
+    view.addSubview(emptyStateView)
+    
+    setupScrollViewConstraints()
+    setupSkeletonConstraints()
+    setupEmptyStateConstraints()
+  }
+  
+  private func setupScrollViewConstraints() {
     NSLayoutConstraint.activate([
       scrollView.topAnchor.constraint(equalTo: view.topAnchor),
       scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -157,69 +172,70 @@ final class MovieDetailViewController: UIViewController {
       overviewLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor,
                                               constant: -16),
       overviewLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor,
-                                            constant: -32),
-      
-      activityIndicator.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-      activityIndicator.centerYAnchor.constraint(equalTo: view.centerYAnchor)
+                                            constant: -32)
+    ])
+  }
+  
+  private func setupSkeletonConstraints() {
+    NSLayoutConstraint.activate([
+      skeletonView.topAnchor.constraint(equalTo: view.topAnchor),
+      skeletonView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+      skeletonView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
+    ])
+  }
+  
+  private func setupEmptyStateConstraints() {
+    NSLayoutConstraint.activate([
+      emptyStateView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+      emptyStateView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+      emptyStateView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+      emptyStateView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
     ])
   }
   
   private func bindViewModel() {
-    viewModel.$movieDetail
+    viewModel.$detailState
       .receive(on: DispatchQueue.main)
-      .compactMap { $0 }
-      .sink { [weak self] detail in
-        self?.updateUI(with: detail)
-      }
-      .store(in: &cancellables)
-    
-    viewModel.$state
-      .receive(on: DispatchQueue.main)
-      .sink { [weak self] state in
-        self?.handleState(state)
-      }
+      .sink { [weak self] state in self?.handleDetailState(state) }
       .store(in: &cancellables)
   }
   
+  // MARK: - State Handling
+  private func handleDetailState(_ state: DetailState) {
+    scrollView.isHidden = true
+    skeletonView.isHidden = true
+    emptyStateView.isHidden = true
+    
+    switch state {
+    case .idle:
+      break
+      
+    case .skeletonLoading:
+      skeletonView.isHidden = false
+      skeletonView.startShimmer()
+      
+    case .success(let detail):
+      scrollView.isHidden = false
+      updateUI(with: detail)
+      
+    case .networkError:
+      emptyStateView.isHidden = false
+      emptyStateView.configure(for: .noNetwork)
+      
+    case .failure(let message):
+      emptyStateView.isHidden = false
+      emptyStateView.configure(for: .error(message))
+    }
+  }
+  
+  // MARK: - UI Update
   private func updateUI(with detail: MovieDetail) {
     title = detail.title
     titleLabel.text = detail.title
     ratingLabel.text = "⭐ \(String(format: "%.1f", detail.voteAverage))"
     genreLabel.text = detail.genres.map { $0.name }.joined(separator: " · ")
     overviewLabel.text = detail.overview
-    loadBackdrop(from: detail.backdropPath)
-  }
-  
-  private func handleState(_ state: ViewModelState<MovieDetail>) {
-    switch state {
-    case .idle: break
-    case .loading: activityIndicator.startAnimating()
-    case .success: activityIndicator.stopAnimating()
-    case .failure(let message):
-      activityIndicator.stopAnimating()
-      showErrorAlert(message: message)
-    }
-  }
-  
-  private func showErrorAlert(message: String) {
-    let alert = UIAlertController(title: "Error",
-                                  message: message,
-                                  preferredStyle: .alert)
-    alert.addAction(UIAlertAction(title: "OK", style: .default))
-    present(alert, animated: true)
-  }
-  
-  private func loadBackdrop(from path: String?) {
-    guard let path = path else { return }
-    let urlString = "https://image.tmdb.org/t/p/w780\(path)"
-    guard let url = URL(string: urlString) else { return }
-    
-    Task {
-      guard let (data, _) = try? await URLSession.shared.data(from: url),
-            let image = UIImage(data: data) else { return }
-      await MainActor.run {
-        self.backdropImageView.image = image
-      }
-    }
+    backdropImageView.loadImage(from: detail.backdropPath,
+                                baseURL: "https://image.tmdb.org/t/p/w780")
   }
 }

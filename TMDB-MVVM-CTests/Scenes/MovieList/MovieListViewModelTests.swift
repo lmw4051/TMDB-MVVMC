@@ -57,7 +57,7 @@ final class MovieListViewModelTests: XCTestCase {
     try? await Task.sleep(nanoseconds: 100_000_000)
     
     // Assert
-    if case .failure(let message) = sut.state {
+    if case .failure(let message) = sut.listState {
       XCTAssertFalse(message.isEmpty)
     } else {
       XCTFail("Expected failure state")

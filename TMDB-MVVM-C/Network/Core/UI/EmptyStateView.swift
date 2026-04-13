@@ -97,4 +97,8 @@ final class EmptyStateView: UIView {
       retryButton.isHidden = false
     }
   }
+  
+  @objc private func retryTapped() {
+    onRetry?()
+  }
 }
