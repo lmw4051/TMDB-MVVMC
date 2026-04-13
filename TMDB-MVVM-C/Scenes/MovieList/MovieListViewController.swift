@@ -81,10 +81,19 @@ final class MovieListViewController: UIViewController {
   override func viewDidLoad() {
     super.viewDidLoad()
     setupUI()
+    setupSearchButton()
     bindViewModel()
     viewModel.viewDidLoad()
   }
   
+  private func setupSearchButton() {
+    navigationItem.rightBarButtonItem = UIBarButtonItem(
+      barButtonSystemItem: .search,
+      target: self,
+      action: #selector(searchTapped)
+    )
+  }
+      
   // MARK: - Setup
   private func setupUI() {
     title = "Movies"
@@ -171,6 +180,10 @@ final class MovieListViewController: UIViewController {
   // MARK: - Actions
   @objc private func handleRefresh() {
     viewModel.refresh()
+  }
+  
+  @objc private func searchTapped() {
+    coordinator?.showSearch()
   }
 }
 
