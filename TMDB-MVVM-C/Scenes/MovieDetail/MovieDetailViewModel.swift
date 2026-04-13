@@ -8,10 +8,17 @@
 import Foundation
 import Combine
 
+enum DetailState {
+  case idle
+  case skeletonLoading
+  case success(MovieDetail)
+  case networkError
+  case failure(String)
+}
+
 final class MovieDetailViewModel {
   // MARK: - Output
-  @Published private(set) var movieDetail: MovieDetail?
-  @Published private(set) var state: ViewModelState<MovieDetail> = .idle
+  @Published private(set) var detailState: DetailState = .idle
   
   // MARK: Private
   private let fetchMovieDetailUseCase: FetchMovieDetailUseCaseProtocol
@@ -19,7 +26,10 @@ final class MovieDetailViewModel {
   private var cancellables = Set<AnyCancellable>()
   
   // MARK: - Init
-  init(fetchMovieDetailUseCase: FetchMovieDetailUseCaseProtocol, movieId: Int) {
+  init(
+    fetchMovieDetailUseCase: FetchMovieDetailUseCaseProtocol,
+    movieId: Int
+  ) {
     self.fetchMovieDetailUseCase = fetchMovieDetailUseCase
     self.movieId = movieId
   }
@@ -29,17 +39,24 @@ final class MovieDetailViewModel {
     Task { await fetchMovieDetail() }
   }
   
+  func retry() {
+    Task { await fetchMovieDetail() }
+  }
+  
   // MARK: - Private
   @MainActor
   private func fetchMovieDetail() async {
-    state = .loading
+    detailState = .skeletonLoading
     
     do {
       let detail = try await fetchMovieDetailUseCase.execute(id: movieId)
-      movieDetail = detail
-      state = .success(detail)
+      detailState = .success(detail)
+    } catch let error as AppError {
+      detailState = error == .networkUnavailable
+      ? .networkError
+      : .failure(error.localizedDescription)
     } catch {
-      state = .failure(error.localizedDescription)
+      detailState = .failure(error.localizedDescription)
     }
   }
 }
