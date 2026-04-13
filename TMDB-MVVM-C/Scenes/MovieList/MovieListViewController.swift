@@ -16,20 +16,11 @@ final class MovieListViewController: UIViewController {
   
   // MARK: - UI Components
   private lazy var collectionView: UICollectionView = {
-    let layout = UICollectionViewFlowLayout()
-    let availableWidth = view.bounds.width
-    
-    layout.itemSize = CGSize(
-      width: (availableWidth - 48) / 2,
-      height: 280
+    let cv = UICollectionView(
+      frame: .zero,
+      collectionViewLayout: CollectionViewLayout.makeMovieGridLayout()
     )
     
-    layout.minimumInteritemSpacing = 16
-    layout.minimumLineSpacing = 16
-    layout.sectionInset = UIEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
-    layout.footerReferenceSize = CGSize(width: availableWidth, height: 60)
-    
-    let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
     cv.translatesAutoresizingMaskIntoConstraints = false
     
     cv.register(
@@ -136,12 +127,19 @@ final class MovieListViewController: UIViewController {
       break
       
     case .skeletonLoading:
+      collectionView.setCollectionViewLayout(
+        CollectionViewLayout.makeSkeletonGridLayout(),
+        animated: false
+      )
+      
       collectionView.reloadData()
       
-    case .paginationLoading:
-      collectionView.reloadData()
+    case .success, .paginationLoading, .paginationError:
+      collectionView.setCollectionViewLayout(
+        CollectionViewLayout.makeMovieGridLayout(),
+        animated: false
+      )
       
-    case .success:
       collectionView.reloadData()
       
     case .empty:
@@ -169,11 +167,7 @@ final class MovieListViewController: UIViewController {
         emptyStateView.configure(for: .error(message))
       } else {
         ToastView.show(in: view, message: message, type: .error)
-      }
-      
-    case .paginationError(let message):
-      ToastView.show(in: view, message: message, type: .warning)
-      collectionView.reloadData()
+      }          
     }
   }
   
