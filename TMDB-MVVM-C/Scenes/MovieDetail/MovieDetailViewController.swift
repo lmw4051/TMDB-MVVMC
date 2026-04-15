@@ -85,6 +85,15 @@ final class MovieDetailViewController: UIViewController {
     return v
   }()
   
+  private lazy var favoriteButton: UIBarButtonItem = {
+    UIBarButtonItem(
+      image: UIImage(systemName: "heart"),
+      style: .plain,
+      target: self,
+      action: #selector(favoriteTapped)
+    )
+  }()
+  
   // MARK: - Init
   init(viewModel: MovieDetailViewModel) {
     self.viewModel = viewModel
@@ -97,6 +106,7 @@ final class MovieDetailViewController: UIViewController {
   override func viewDidLoad() {
     super.viewDidLoad()
     setupUI()
+    setupFavoriteButton()
     bindViewModel()
     viewModel.viewDidLoad()
   }
@@ -126,6 +136,10 @@ final class MovieDetailViewController: UIViewController {
     setupScrollViewConstraints()
     setupSkeletonConstraints()
     setupEmptyStateConstraints()
+  }
+  
+  private func setupFavoriteButton() {
+    navigationItem.rightBarButtonItem = favoriteButton
   }
   
   private func setupScrollViewConstraints() {
@@ -198,6 +212,13 @@ final class MovieDetailViewController: UIViewController {
       .receive(on: DispatchQueue.main)
       .sink { [weak self] state in self?.handleDetailState(state) }
       .store(in: &cancellables)
+    
+    viewModel.$isFavorite
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] isFavorite in
+        self?.updateFavoriteButton(isFavorite: isFavorite)
+      }
+      .store(in: &cancellables)
   }
   
   // MARK: - State Handling
@@ -235,7 +256,23 @@ final class MovieDetailViewController: UIViewController {
     ratingLabel.text = "⭐ \(String(format: "%.1f", detail.voteAverage))"
     genreLabel.text = detail.genres.map { $0.name }.joined(separator: " · ")
     overviewLabel.text = detail.overview
-    backdropImageView.loadImage(from: detail.backdropPath,
-                                baseURL: "https://image.tmdb.org/t/p/w780")
+    backdropImageView.loadImage(
+      from: detail.backdropPath,
+      baseURL: "https://image.tmdb.org/t/p/w780"
+    )
+  }
+  
+  private func updateFavoriteButton(isFavorite: Bool) {
+    let imageName = isFavorite ? "heart.fill" : "heart"
+    favoriteButton.image = UIImage(systemName: imageName)
+    favoriteButton.tintColor = isFavorite ? .systemRed : .systemGray
+  }
+  
+  // MARK: - Actions
+  @objc private func favoriteTapped() {
+    viewModel.toggleFavorite()
+    
+    let feedback = UIImpactFeedbackGenerator(style: .medium)
+    feedback.impactOccurred()
   }
 }
