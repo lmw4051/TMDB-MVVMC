@@ -10,6 +10,7 @@ import Combine
 
 final class FavoritesViewController: UIViewController {
   // MARK: - Properties
+  weak var coordinator: FavoritesCoordinator?
   private let viewModel: FavoritesViewModel
   private var cancellables = Set<AnyCancellable>()
   
@@ -134,13 +135,18 @@ extension FavoritesViewController: UICollectionViewDataSource {
   func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
     let cell = collectionView.dequeueReusableCell(withReuseIdentifier: MovieCell.reuseIdentifier, for: indexPath) as! MovieCell
     cell.configure(with: viewModel.movies[indexPath.item])
+    return cell
   }
 }
 
 // MARK: - UICollectionViewDelegate
 extension FavoritesViewController: UICollectionViewDelegate {
-  func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+  func collectionView(
+    _ collectionView: UICollectionView,
+    didSelectItemAt indexPath: IndexPath
+  ) {
     let movie = viewModel.movies[indexPath.item]
+    coordinator?.showDetail(movieId: movie.id)
   }
   
   func collectionView(
