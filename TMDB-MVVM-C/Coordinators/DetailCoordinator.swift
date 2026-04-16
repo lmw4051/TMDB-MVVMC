@@ -26,10 +26,14 @@ final class DetailCoordinator: Coordinator {
   
   func start() {
     let networkService = NetworkService()
-    let repository = MovieRepository(networkService: networkService)
-    let useCase = FetchMovieDetailUseCase(repository: repository)
+    let movieRepository = MovieRepository(networkService: networkService)
+    let favoriteRepository = FavoriteRepository()
+    
     let viewModel = MovieDetailViewModel(
-      fetchMovieDetailUseCase: useCase,
+      fetchMovieDetailUseCase: FetchMovieDetailUseCase(repository: movieRepository),
+      addFavoriteUseCase: AddFavoriteUseCase(repository: favoriteRepository),
+      removeFavoriteUseCase: RemoveFavoriteUseCase(repository: favoriteRepository),
+      checkFavoriteUseCase: CheckFavoriteUseCase(repository: favoriteRepository),
       movieId: movieId
     )
     
