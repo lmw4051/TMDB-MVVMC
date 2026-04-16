@@ -8,19 +8,27 @@
 import UIKit
 
 final class AppCoordinator: Coordinator {
-  var navigationController: UINavigationController
+  var navigationController: UINavigationController = UINavigationController()
   var childCoordinators: [Coordinator] = []
   
-  init(navigationController: UINavigationController) {
-    self.navigationController = navigationController
+  private let tabBarController: UITabBarController
+  private let movieListCoordinator: MovieListCoordinator
+  private let favoritesCoordinator: FavoritesCoordinator
+  
+  init(
+    tabBarController: UITabBarController,
+    movieListCoordinator: MovieListCoordinator,
+    favoritesCoordinator: FavoritesCoordinator
+  ) {
+    self.tabBarController = tabBarController
+    self.movieListCoordinator = movieListCoordinator
+    self.favoritesCoordinator = favoritesCoordinator
   }
   
   func start() {
-    let movieListCoordinator = MovieListCoordinator(
-      navigationController: navigationController
-    )
-    
     childCoordinators.append(movieListCoordinator)
+    childCoordinators.append(favoritesCoordinator)
     movieListCoordinator.start()
+    favoritesCoordinator.start()        
   }
 }
