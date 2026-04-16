@@ -18,12 +18,41 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
   ) {
     guard let windowScene = (scene as? UIWindowScene) else { return }
     
-    let navigationController = UINavigationController()
-    appCoordinator = AppCoordinator(navigationController: navigationController)
+    let tabBarController = UITabBarController()
+    
+    // Movies Tab
+    let moviesNavController = UINavigationController()
+    moviesNavController.tabBarItem = UITabBarItem(
+      title: "Movie",
+      image: UIImage(systemName: "film"),
+      selectedImage: UIImage(systemName: "film.fill")
+    )
+    
+    let moviesCoordinator = MovieListCoordinator(navigationController: moviesNavController)
+    
+    // Favorites Tab
+    let favoritesNavController = UINavigationController()
+    favoritesNavController.tabBarItem = UITabBarItem(
+      title: "Favorites",
+      image: UIImage(systemName: "heart"),
+      selectedImage: UIImage(systemName: "heart.fill")
+    )
+    
+    let favoritesCoordinator = FavoritesCoordinator(navigationController: favoritesNavController)
+    
+    // AppCoordinator
+    appCoordinator = AppCoordinator(
+      tabBarController: tabBarController,
+      movieListCoordinator: moviesCoordinator,
+      favoritesCoordinator: favoritesCoordinator
+    )
+    
     appCoordinator?.start()
     
+    tabBarController.viewControllers = [moviesNavController, favoritesNavController]
+    
     window = UIWindow(windowScene: windowScene)
-    window?.rootViewController = navigationController
+    window?.rootViewController = tabBarController
     window?.makeKeyAndVisible()
   }
 
